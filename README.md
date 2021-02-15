@@ -26,7 +26,11 @@ Run a specific strategy emulation like this:
 ruby baseline.rb -c 16 -n 300,20,500,200,1000,120
 ```
 
-You will see a visualization of executed jobs (each color represents a particular tenant) and the final statistics information.
+You will see a visualization of executed jobs (each color represents a particular tenant) and the final statistics information:
+
+<p align="center">
+    <img src="./example.png" alt="Example output" width="738">
+</p>
 
 To learn about available CLI options use `-h` switch:
 
