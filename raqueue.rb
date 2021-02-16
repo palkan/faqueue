@@ -18,28 +18,67 @@ module Raqueue
 
   class Pipe
     def initialize
-      @ractor = Ractor.new do
+      @executor = Ractor.new do
         loop do
           Ractor.yield(Ractor.receive, move: true)
+        end
+      end
+
+      @scheduler = Ractor.new(self) do |pipe|
+        Ractor.current[:node] = pipe
+
+        backlog = []
+
+        loop do
+          msg = Ractor.receive
+
+          # add new jobs to the backlog
+          unless msg == :tick
+            ind = backlog.find_index { _1[0] >= msg[0] } || 0
+
+            backlog.insert(ind, msg)
+          end
+
+          # flush jobs
+          loop do
+            break if backlog.empty? || backlog.first[0] > Time.now
+
+            _, worker, args, kwargs = *backlog.shift
+
+            worker = Object.const_get(worker)
+            worker.perform_async(*args, **kwargs)
+          end
+        end
+      end
+
+      Ractor.new(scheduler) do |scheduler|
+        loop do
+          scheduler << :tick
+
+          sleep 2
         end
       end
     end
 
     def enqueue_job(job)
-      ractor.send(job)
+      executor.send(job)
     end
 
     def enqueue(queue, worker, payload)
-      ractor.send({queue: queue, worker_class: worker, payload: payload})
+      executor.send({queue: queue, worker_class: worker, payload: payload})
+    end
+
+    def schedule(*args)
+      scheduler.send(args)
     end
 
     def dequeue
-      ractor.take
+      executor.take
     end
 
     private
 
-    attr_reader :ractor
+    attr_reader :executor, :scheduler
   end
 
   class Node
@@ -55,8 +94,13 @@ module Raqueue
       queues[name] = {name: name, size: size}
     end
 
-    def enqueue(queue, worker, payload)
-      pipe.enqueue(queue, worker, payload)
+    # Delegate enqueuing methods to pipe
+    def enqueue(...)
+      pipe.enqueue(...)
+    end
+
+    def schedule(...)
+      pipe.schedule(...)
     end
 
     def start
@@ -149,7 +193,7 @@ module Raqueue
 
               worker.new.run(job[:payload])
             rescue Exception => e
-              warn "Failed to execute job #{job}: #{e.message}"
+              warn "Failed to execute job #{job}: #{e.message}\n#{e.backtrace.take(3).join("\n")}"
             end
           end
         rescue Ractor::ClosedError
@@ -190,6 +234,11 @@ module Raqueue
         payload[:start] ||= Utils.now
         payload[:queue] = queue
         node.enqueue queue, self.name, payload
+      end
+
+      def perform_at(time, *args, **kwargs)
+        node = Ractor.current[:node] || Raqueue.node
+        node.schedule(time, self.name, args, kwargs)
       end
     end
 
