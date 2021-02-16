@@ -1,14 +1,21 @@
 # frozen_string_literal: true
 
-require "bundler/inline"
+begin
+  require "tty-cursor"
+  require "tty-screen"
+  require "tty-table"
+  require "pastel"
+rescue LoadError
+  require "bundler/inline"
 
-gemfile(true, quiet: true) do
-  source "https://rubygems.org"
+  gemfile(true, quiet: true) do
+    source "https://rubygems.org"
 
-  gem "tty-cursor"
-  gem "tty-screen"
-  gem "tty-table"
-  gem "pastel"
+    gem "tty-cursor"
+    gem "tty-screen"
+    gem "tty-table"
+    gem "pastel"
+  end
 end
 
 # Pastel is not Ractor-ready,
@@ -101,13 +108,17 @@ module Stats
 
     using(Module.new do
       refine Array do
+        def sorted
+          @sorted ||= sort
+        end
+
         def mean
           @mean ||= (sum.to_f / size)
         end
 
         # Requires sorted array
         def p90
-          @p90 ||= self[(0.9*size).to_i]
+          @p90 ||= sorted[(0.9*size).to_i]
         end
 
         def stddev
@@ -141,20 +152,40 @@ module Stats
         tenants[item[4]] << lat
       end
 
-      all_lats.sort!
-      tenants.each_value(&:sort!)
-
       all_mean = all_lats.mean
+      head = tenants.values.map(&:size).min
 
-      table = TTY::Table.new(header: ["", "Total", "Lat (mean)", "Lat (p90)"])
+      table = TTY::Table.new(header: ["", "Total", "Lat first-#{head} (mean)", "Lat first-#{head} (p90)", "Lat (mean)", "Lat (p90)"])
 
       tenants.each do |k, lats|
         color = AVAILABLE_COLORS[k]
-        table << ["Tenant #{TENANT_NAMES[k]}", lats.size, lats.mean.duration, lats.p90.duration].map { _1.to_s.color(color) }
+        table << [
+          "Tenant #{TENANT_NAMES[k]}",
+          lats.size,
+          lats.take(head).mean.duration,
+          lats.take(head).p90.duration,
+          lats.mean.duration,
+          lats.p90.duration,
+        ].map { _1.to_s.color(color) }
       end
 
-      table << ["Overall", "#{data.size} (in #{(max_end - min_start).duration}s)", all_mean.duration, all_lats.p90.duration]
-      table << ["Stddev", "", tenants.values.map(&:mean).stddev, tenants.values.map(&:p90).stddev]
+      table << [
+        "Overall",
+        "#{data.size} (in #{(max_end - min_start).duration}s)",
+        "",
+        "",
+        all_mean.duration,
+        all_lats.p90.duration
+      ]
+
+      table << [
+        "Stddev",
+        "",
+        tenants.values.map { _1.take(head).mean }.stddev,
+        tenants.values.map { _1.take(head).p90 }.stddev,
+        tenants.values.map(&:mean).stddev,
+        tenants.values.map(&:p90).stddev
+      ]
 
       rendered = table.render(:unicode, padding: [0, 2]) do |renderer|
         renderer.border.separator = [0, tenants.size, tenants.size + 1]

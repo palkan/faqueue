@@ -134,6 +134,8 @@ module Raqueue
       @workers = size.times.map do |num|
         Ractor.new(pipe, stats, num, name, node, name: "#{inspect} ##{num}") do |pipe, stats, num, queue, node|
           Ractor.current[:node] = node
+          Ractor.current[:worker_id] = num
+          Ractor.current[:stats] = stats
 
           loop do
             job = pipe.take
@@ -145,9 +147,7 @@ module Raqueue
             begin
               worker = Object.const_get(job[:worker_class])
 
-              worker.new.perform(job[:payload])
-
-              stats.send([queue, num, Utils.now, job[:payload][:start], job[:payload][:tenant]], move: true) if stats
+              worker.new.run(job[:payload])
             rescue Exception => e
               warn "Failed to execute job #{job}: #{e.message}"
             end
@@ -188,11 +188,28 @@ module Raqueue
       def perform_async(payload = {}, queue: :default)
         node = Ractor.current[:node] || Raqueue.node
         payload[:start] ||= Utils.now
+        payload[:queue] = queue
         node.enqueue queue, self.name, payload
       end
     end
 
+    def run(payload)
+      before_perform(payload)
+      perform(payload)
+    end
+
     def perform(payload = {})
+    end
+
+    def before_perform(payload = {})
+      stats = Ractor.current[:stats]
+      stats.send([
+        payload[:queue],
+        Ractor.current[:worker_id],
+        Utils.now,
+        payload[:start],
+        payload[:tenant]
+      ], move: true) if stats
     end
   end
 end

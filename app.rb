@@ -34,8 +34,8 @@ module Config
     end
   end
 
-  self.concurrency = 4
-  self.scales = [1000, 20, 10]
+  self.concurrency = 8
+  self.scales = [300, 20, 500, 30, 200, 20]
 end
 
 require_relative "./raqueue"
