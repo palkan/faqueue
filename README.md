@@ -85,6 +85,13 @@ With four shards (fair):
   <img src="./shards_4_2.png" alt="Shuffle shards (4) profile 2" width="738">
 </p>
 
+With four shards total and each batch using two shards:
+
+<p align="center">
+  <img src="./shards_4x2.png" alt="Shuffle shards (4, 2 per batch) profile" width="738">
+</p>
+
+
 ## Resources
 
 - [The State of Background Jobs in 2019][kirs-post] by Kir Shatrov
