@@ -91,6 +91,15 @@ With four shards total and each batch using two shards:
   <img src="./shards_4x2.png" alt="Shuffle shards (4, 2 per batch) profile" width="738">
 </p>
 
+### Throttling + Rescheduling
+
+This approach has been implemnted in one of the Evil Martians projects back in the days.
+
+The idea is the following: we define a _cooldown period_ for each tenant, i.e., a period during which only a single job is allowed to be performed (actually, enqueued). Every time a job is executed, we store a _deadline_ (`now + cooldown`) in a distributed cache. If the next job arrives earlier than the deadline, we increase the deadline and re-schedules this job to be executed later.
+
+<p align="center">
+  <img src="./throttle.png" alt="Throttling/Rescheduling profile" width="738">
+</p>
 
 ## Resources
 

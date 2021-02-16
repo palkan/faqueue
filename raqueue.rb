@@ -34,14 +34,14 @@ module Raqueue
 
           # add new jobs to the backlog
           unless msg == :tick
-            ind = backlog.find_index { _1[0] >= msg[0] } || 0
+            ind = backlog.find_index { _1[0] >= msg[0] }
 
-            backlog.insert(ind, msg)
+            ind ? backlog.insert(ind, msg) : backlog.push(msg)
           end
 
           # flush jobs
           loop do
-            break if backlog.empty? || backlog.first[0] > Time.now
+            break if backlog.empty? || backlog.first[0] > Time.now.to_f
 
             _, worker, args, kwargs = *backlog.shift
 
@@ -55,7 +55,7 @@ module Raqueue
         loop do
           scheduler << :tick
 
-          sleep 2
+          sleep 1
         end
       end
     end
@@ -69,7 +69,7 @@ module Raqueue
     end
 
     def schedule(*args)
-      scheduler.send(args)
+      scheduler.send(args, move: true)
     end
 
     def dequeue
@@ -238,7 +238,7 @@ module Raqueue
 
       def perform_at(time, *args, **kwargs)
         node = Ractor.current[:node] || Raqueue.node
-        node.schedule(time, self.name, args, kwargs)
+        node.schedule(time.to_f, self.name, args, kwargs)
       end
     end
 
