@@ -72,8 +72,8 @@ module Raqueue
 
           if job == :stop
             queues.each_value.map do |queue|
-              Thread.new { queue.wait_till_executed }
-            end.map(&:join)
+              queue.wait_till_executed
+            end
 
             stats << :result
 

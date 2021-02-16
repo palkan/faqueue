@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+Warning[:experimental] = false
+
 require "optparse"
 
 module Config
@@ -34,7 +36,7 @@ module Config
     end
   end
 
-  self.concurrency = 8
+  self.concurrency = 12
   self.scales = [300, 20, 500, 30, 200, 20]
 end
 
@@ -44,13 +46,6 @@ class MailerWorker < Raqueue::Worker
   def perform(*)
     # Sleep for 200-250ms
     sleep(0.2 + rand(50) / 1000.0)
-  end
-end
-
-class BatchMailerWorker < Raqueue::Worker
-  def perform(payload)
-    num = payload.delete(:total)
-    num.times { MailerWorker.perform_async(payload.dup) }
   end
 end
 

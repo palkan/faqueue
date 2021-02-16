@@ -54,12 +54,36 @@ Baseline: just a queue, totally unfair
 This is the default behavior: do not care about the fairness.
 
 <p align="center">
-    <img src="./example.png" alt="Example output" width="738">
+  <img src="./baseline.png" alt="Baseline profile" width="738">
 </p>
 
-### Random shards
+### Shuffle shards
 
 This strategy is described [here][sidekiq-shards].
+
+With two shards:
+
+<p align="center">
+  <img src="./shards_2.png" alt="Shuffle shards (2) profile" width="738">
+</p>
+
+With three shards:
+
+<p align="center">
+  <img src="./shards_3.png" alt="Shuffle shards (3) profile" width="738">
+</p>
+
+With four shards (unfair):
+
+<p align="center">
+  <img src="./shards_4_1.png" alt="Shuffle shards (4) profile" width="738">
+</p>
+
+With four shards (fair):
+
+<p align="center">
+  <img src="./shards_4_2.png" alt="Shuffle shards (4) profile 2" width="738">
+</p>
 
 ## Resources
 

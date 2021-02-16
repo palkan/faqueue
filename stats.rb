@@ -80,19 +80,20 @@ module Stats
 
     # Data has a form of [ [queue:0, worker_index:1, end_time:2, start_time:3, tenant:4] ]
     def draw_workers(data, refresh_lines: -1)
-      lines = []
+      lines = Hash.new { |h, k| h[k] = [] }
 
       data.each do |item|
         color = AVAILABLE_COLORS[item[4]]
         name = TENANT_NAMES[item[4]]
-        lines[item[1]] ||= []
-        lines[item[1]] << name.color(color)
+        worker_id = "#{item[0]}:#{item[1]}"
+        lines[worker_id] ||= []
+        lines[worker_id] << name.color(color)
       end
 
       max_width = TTY::Screen.columns
 
       print TTY::Cursor.clear_lines(refresh_lines + 1, :up) if refresh_lines > 0
-      lines.each do |line|
+      lines.each_value do |line|
         next unless line
         size = line.size
         if size > max_width
@@ -144,13 +145,18 @@ module Stats
 
       data.each do |item|
         lat = item[2] - item[3]
-        all_lats << lat
 
         min_start = item[3] if min_start.nil? || item[3] < min_start
         max_end = item[2] if max_end.nil? || item[2] > max_end
 
+        # Do not track batch jobs
+        all_lats << lat unless tenants[item[4]].empty?
+
         tenants[item[4]] << lat
       end
+
+      # Remove batch jobs
+      tenants.transform_values! { _1.shift; _1 }
 
       all_mean = all_lats.mean
       head = tenants.values.map(&:size).min
