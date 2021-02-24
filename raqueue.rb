@@ -144,7 +144,7 @@ module Raqueue
 
       pipe.enqueue_job :stop
       stats = executor.take
-      Stats.draw_table(stats)
+      Stats.draw_table(stats) unless ENV["SKIP_TABLE"] == "true"
     end
 
     private

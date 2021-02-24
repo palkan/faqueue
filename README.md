@@ -110,6 +110,15 @@ The idea is the following: we define a _cooldown period_ for each tenant, i.e., 
   <img src="./assets/throttle.png" alt="Throttling/Rescheduling profile" width="738">
 </p>
 
+### Interruptible iteration
+
+This approach is inspired by the [job-iteration][] technique used in Shopify: instead of enqueuing atomic jobs for each batch, we perform
+them synchrounously in a loop and _pause_ the iteration if we took more than the specified amount of time. "Pause" means re-enqueuing the current jobs with the cursor specified to indicate the starting point for the iteration.
+
+<p align="center">
+  <img src="./assets/iteration.png" alt="Iteration profile" width="738">
+</p>
+
 ## Resources
 
 - [The State of Background Jobs in 2019][kirs-post] by Kir Shatrov
@@ -118,3 +127,4 @@ The idea is the following: we define a _cooldown period_ for each tenant, i.e., 
 [kirs-post]: https://kirshatrov.com/2019/01/03/state-of-background-jobs/
 [Fairway]: https://github.com/customerio/fairway
 [sidekiq-shards]: https://www.mikeperham.com/2019/12/17/workload-isolation-with-queue-sharding/
+[job-iteration]: https://github.com/Shopify/job-iteration
