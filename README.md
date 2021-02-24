@@ -91,6 +91,15 @@ With four shards total and each batch using two shards:
   <img src="./shards_4x2.png" alt="Shuffle shards (4, 2 per batch) profile" width="738">
 </p>
 
+### Defined Shards
+
+This approach assumes assigning a shard to each tenant. If we know how to distrbute tenants accross the shards so that
+they do not block each other, that would be a good solution. However, that task by itself is not easy (and a totally different story).
+
+<p align="center">
+  <img src="./defined_shards.png" alt="Predefined shards" width="738">
+</p>
+
 ### Throttling + Rescheduling
 
 This approach has been implemnted in one of the Evil Martians projects back in the days.
