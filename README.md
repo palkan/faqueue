@@ -54,7 +54,7 @@ Baseline: just a queue, totally unfair
 This is the default behavior: do not care about the fairness.
 
 <p align="center">
-  <img src="./baseline.png" alt="Baseline profile" width="738">
+  <img src="./assets/baseline.png" alt="Baseline profile" width="738">
 </p>
 
 ### Shuffle shards
@@ -64,31 +64,31 @@ This strategy is described [here][sidekiq-shards].
 With two shards:
 
 <p align="center">
-  <img src="./shards_2.png" alt="Shuffle shards (2) profile" width="738">
+  <img src="./assets/shards_2.png" alt="Shuffle shards (2) profile" width="738">
 </p>
 
 With three shards:
 
 <p align="center">
-  <img src="./shards_3.png" alt="Shuffle shards (3) profile" width="738">
+  <img src="./assets/shards_3.png" alt="Shuffle shards (3) profile" width="738">
 </p>
 
 With four shards (unfair):
 
 <p align="center">
-  <img src="./shards_4_1.png" alt="Shuffle shards (4) profile" width="738">
+  <img src="./assets/shards_4_1.png" alt="Shuffle shards (4) profile" width="738">
 </p>
 
 With four shards (fair):
 
 <p align="center">
-  <img src="./shards_4_2.png" alt="Shuffle shards (4) profile 2" width="738">
+  <img src="./assets/shards_4_2.png" alt="Shuffle shards (4) profile 2" width="738">
 </p>
 
 With four shards total and each batch using two shards:
 
 <p align="center">
-  <img src="./shards_4x2.png" alt="Shuffle shards (4, 2 per batch) profile" width="738">
+  <img src="./assets/shards_4x2.png" alt="Shuffle shards (4, 2 per batch) profile" width="738">
 </p>
 
 ### Defined Shards
@@ -97,7 +97,7 @@ This approach assumes assigning a shard to each tenant. If we know how to distrb
 they do not block each other, that would be a good solution. However, that task by itself is not easy (and a totally different story).
 
 <p align="center">
-  <img src="./defined_shards.png" alt="Predefined shards" width="738">
+  <img src="./assets/defined_shards.png" alt="Predefined shards" width="738">
 </p>
 
 ### Throttling + Rescheduling
@@ -107,7 +107,7 @@ This approach has been implemnted in one of the Evil Martians projects back in t
 The idea is the following: we define a _cooldown period_ for each tenant, i.e., a period during which only a single job is allowed to be performed (actually, enqueued). Every time a job is executed, we store a _deadline_ (`now + cooldown`) in a distributed cache. If the next job arrives earlier than the deadline, we increase the deadline and re-schedules this job to be executed later.
 
 <p align="center">
-  <img src="./throttle.png" alt="Throttling/Rescheduling profile" width="738">
+  <img src="./assets/throttle.png" alt="Throttling/Rescheduling profile" width="738">
 </p>
 
 ## Resources
