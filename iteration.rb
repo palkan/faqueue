@@ -17,6 +17,8 @@ module Config
 end
 
 Config.max_time = 2
+Config.concurrency = 4
+Config.scales = [150, 20, 150, 30, 100, 20]
 
 Config.optparser.on("-t TIME", "--time=TIME", Integer, "The maximum time to perform iterations (seconds)") do |v|
   Config.max_time = v
