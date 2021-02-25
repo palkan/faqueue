@@ -161,7 +161,9 @@ module Stats
       all_mean = all_lats.mean
       head = tenants.values.map(&:size).min
 
-      table = TTY::Table.new(header: ["", "Total", "Lat first-#{head} (mean)", "Lat first-#{head} (p90)", "Lat (mean)", "Lat (p90)"])
+      cols = TTY::Screen.columns > 120 ? 6 : 4
+
+      table = TTY::Table.new(header: ["", "Total", "Lat first-#{head} (mean)", "Lat first-#{head} (p90)", "Lat (mean)", "Lat (p90)"].take(cols))
 
       tenants.each do |k, lats|
         color = AVAILABLE_COLORS[k]
@@ -172,7 +174,7 @@ module Stats
           lats.take(head).p90.duration,
           lats.mean.duration,
           lats.p90.duration,
-        ].map { _1.to_s.color(color) }
+        ].map { _1.to_s.color(color) }.take(cols)
       end
 
       table << [
@@ -182,7 +184,7 @@ module Stats
         "",
         all_mean.duration,
         all_lats.p90.duration
-      ]
+      ].take(cols)
 
       table << [
         "Stddev",
@@ -191,7 +193,7 @@ module Stats
         tenants.values.map { _1.take(head).p90 }.stddev,
         tenants.values.map(&:mean).stddev,
         tenants.values.map(&:p90).stddev
-      ]
+      ].take(cols)
 
       rendered = table.render(:unicode, padding: [0, 2]) do |renderer|
         renderer.border.separator = [0, tenants.size, tenants.size + 1]
