@@ -110,6 +110,8 @@ The idea is the following: we define a _cooldown period_ for each tenant, i.e., 
   <img src="./assets/throttle.png" alt="Throttling/Rescheduling profile" width="738">
 </p>
 
+See [the example implementation for Sidekiq](./examples/sidekiq_throttling_sheduler.rb).
+
 ### Interruptible iteration
 
 This approach is inspired by the [job-iteration][] technique used in Shopify: instead of enqueuing atomic jobs for each batch, we perform
@@ -118,6 +120,12 @@ them synchrounously in a loop and _pause_ the iteration if we took more than the
 <p align="center">
   <img src="./assets/iteration.png" alt="Iteration profile" width="738">
 </p>
+
+You can achieve a similar behaviour for Sidekiq via `job-iteration` by configaring an appropriate max wait time:
+
+```ruby
+JobIteration.max_job_runtime = 2.minutes
+```
 
 ## Resources
 
