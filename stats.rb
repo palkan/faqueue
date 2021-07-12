@@ -15,8 +15,12 @@ rescue LoadError
     gem "tty-screen"
     gem "tty-table"
     gem "pastel"
+
+    gem "ruby-next"
   end
 end
+
+using RubyNext
 
 # Pastel is not Ractor-ready,
 # so let's just extract the required data to our custom constant
@@ -28,17 +32,21 @@ AVAILABLE_COLORS = Pastel.new.styles.filter_map do |name, val|
   val
 end
 
-Ractor.make_shareable(AVAILABLE_COLORS)
-
-TENANT_NAMES = ("a".."z").reverse_each.take(AVAILABLE_COLORS.size + 2)
-# Let's leave only 'v' :)
-TENANT_NAMES.delete("w")
-TENANT_NAMES.delete("u")
-Ractor.make_shareable(TENANT_NAMES)
-
 # Receive statistics from the Raqueue in the real-time and draw some stuff in the terminal
 module Stats
+  Ractor = Backports::Ractor unless defined?(Ractor)
+
+  Ractor.make_shareable(AVAILABLE_COLORS)
+
+  TENANT_NAMES = ("a".."z").reverse_each.take(AVAILABLE_COLORS.size + 2)
+  # Let's leave only 'v' :)
+  TENANT_NAMES.delete("w")
+  TENANT_NAMES.delete("u")
+  Ractor.make_shareable(TENANT_NAMES)
+
   class << self
+    include Backports
+
     def receiver(refresh_interval: 1)
       Ractor.new(refresh_interval) do |refresh_interval|
         prev_frame = Time.now

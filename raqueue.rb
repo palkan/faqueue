@@ -4,6 +4,8 @@
 # It has a very basic interface and only assumed to be used for demonstration purposes.
 
 module Raqueue
+  Ractor = Backports::Ractor unless defined?(Ractor)
+
   class << self
     attr_accessor :node
   end

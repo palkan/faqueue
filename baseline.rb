@@ -12,12 +12,12 @@ node.start
 class BatchMailerWorker < Raqueue::Worker
   def perform(payload)
     num = payload.delete(:total)
-    num.times { MailerWorker.perform_async(payload.dup) }
+    num.times { MailerWorker.perform_async(payload.dup, queue: :default) }
   end
 end
 
 Config.scales.each.with_index do |num, i|
-  BatchMailerWorker.perform_async({total: num, tenant: i})
+  BatchMailerWorker.perform_async({total: num, tenant: i}, queue: :default)
   sleep 1
 end
 

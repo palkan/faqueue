@@ -2,6 +2,8 @@
 
 # Ractor-compatible in-memory cache
 class RCache
+  Ractor = Backports::Ractor unless defined?(Ractor)
+
   def initialize
     @storage = Ractor.new do
       store = {}

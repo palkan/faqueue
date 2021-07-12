@@ -1,5 +1,25 @@
 # frozen_string_literal: true
 
+require "bundler/inline"
+
+gemfile(true, quiet: true) do
+  source "https://rubygems.org"
+
+  gem "ruby-next"
+  gem "backports", require: false
+end
+
+require "ruby-next/language/runtime"
+RubyNext::Language.watch_dirs << __dir__
+
+using(Module.new do
+  refine Warning.singleton_class do
+    def []=(k,v); end
+  end
+end)
+
+require "backports/ractor/ractor"
+
 Warning[:experimental] = false
 
 require "optparse"
