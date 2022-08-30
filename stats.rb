@@ -45,7 +45,7 @@ module Stats
   Ractor.make_shareable(TENANT_NAMES)
 
   class << self
-    include Backports
+    include Backports unless defined?(Ractor)
 
     def receiver(refresh_interval: 1)
       Ractor.new(refresh_interval) do |refresh_interval|

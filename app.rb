@@ -13,12 +13,14 @@ require "ruby-next/language/runtime"
 RubyNext::Language.watch_dirs << __dir__
 
 using(Module.new do
-  refine Warning.singleton_class do
-    def []=(k,v); end
+  unless Warning.respond_to?(:[]=)
+    refine Warning.singleton_class do
+      def []=(k,v); end
+    end
   end
 end)
 
-require "backports/ractor/ractor"
+require "backports/ractor/ractor" unless defined?(Ractor)
 
 Warning[:experimental] = false
 
