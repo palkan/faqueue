@@ -254,13 +254,13 @@ module Raqueue
 
     def before_perform(payload = {})
       stats = Ractor.current[:stats]
-      stats.send([
-        payload[:queue],
-        Ractor.current[:worker_id],
-        Utils.now,
-        payload[:start],
-        payload[:tenant]
-      ], move: true) if stats
+      stats.send(Stats::Point.new(
+        queue: payload[:queue],
+        worker_id: Ractor.current[:worker_id],
+        started_at: Utils.now,
+        enqueued_at: payload[:start],
+        tenant: payload[:tenant]
+      ), move: true) if stats
     end
   end
 end

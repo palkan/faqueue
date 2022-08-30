@@ -44,6 +44,9 @@ module Stats
   TENANT_NAMES.delete("u")
   Ractor.make_shareable(TENANT_NAMES)
 
+  class Point < Struct.new(:queue, :worker_id, :started_at, :enqueued_at, :tenant, keyword_init: true)
+  end
+
   class << self
     include Backports unless defined?(Ractor)
 
@@ -91,9 +94,9 @@ module Stats
       lines = Hash.new { |h, k| h[k] = [] }
 
       data.each do |item|
-        color = AVAILABLE_COLORS[item[4]]
-        name = TENANT_NAMES[item[4]]
-        worker_id = "#{item[0]}:#{item[1]}"
+        color = AVAILABLE_COLORS[item.tenant]
+        name = TENANT_NAMES[item.tenant]
+        worker_id = "#{item.queue}:#{item.worker_id}"
         lines[worker_id] ||= []
         lines[worker_id] << name.color(color)
       end
@@ -152,15 +155,15 @@ module Stats
       max_end = nil
 
       data.each do |item|
-        lat = item[2] - item[3]
+        lat = item.started_at - item.enqueued_at
 
-        min_start = item[3] if min_start.nil? || item[3] < min_start
-        max_end = item[2] if max_end.nil? || item[2] > max_end
+        min_start = item.enqueued_at if min_start.nil? || item.enqueued_at < min_start
+        max_end = item.started_at if max_end.nil? || item.started_at > max_end
 
         # Do not track batch jobs
-        all_lats << lat unless tenants[item[4]].empty?
+        all_lats << lat unless tenants[item.tenant].empty?
 
-        tenants[item[4]] << lat
+        tenants[item.tenant] << lat
       end
 
       # Remove batch jobs
