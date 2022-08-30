@@ -17,9 +17,32 @@ class RCache
           in :set, key, val
             store[key] = val
             sender << [id, val]
+          in :incr, key
+            store[key] ||= 0
+            store[key] += 1
+            sender << [id, store[key]]
+          in :decr, key
+            if store[key] && store[key] > 0
+              store[key] -= 1
+            else
+              store[key]
+            end
+            sender << [id, store[key]]
         end
       end
     end
+  end
+
+  def incr(key)
+    id = current_id
+    storage.send([Ractor.current, id, :incr, key])
+    Ractor.receive_if { _1[0] == id }[1]
+  end
+
+  def decr(key)
+    id = current_id
+    storage.send([Ractor.current, id, :decr, key])
+    Ractor.receive_if { _1[0] == id }[1]
   end
 
   def get(key)

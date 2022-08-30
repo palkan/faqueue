@@ -127,6 +127,31 @@ You can achieve a similar behaviour for Sidekiq via `job-iteration` by configari
 JobIteration.max_job_runtime = 2.minutes
 ```
 
+### Balanced shards (or fast-medium-slow)
+
+This strategy is somewhat similar to sharding, but a shard is chosen for each job depending on the current tenat's usage so far: when you enqueue more jobs, they switched from the `fast` to the `medium` queue first and to the `slow` queue after that. The _virtual credits_ are used to evaluate the usage, they're getting refilled periodically.
+
+<p align="center">
+  <img src="./assets/balanced_shards.png" alt="Balanced shards profile" width="738">
+</p>
+
+As we can see, routing jobs to queues simply based on the tenant's usage could have an underutilization problem in case the load is not constant.
+
+## Continious batches
+
+In real-life, we do not enqueue all the jobs at the same time and wait for them to complete. We have tenant enqueueing jobs at different moments in time and at different rates. You can emulate such scenarios by passing _batches_ of jobs with delays between them using the following format:
+
+```sh
+ruby baseline.rb -c 8 -n "100|5s|100|5s|100,10|5s|10,500,50|5s|100|5s|50,200|4s|400|10s|200|5s|200"
+
+# or
+ruby throttle_schedule.rb -c 8 -n "200|5s|100|20s|200|6s|200|14s|100,10|15s|10|14s|10|2s|10"
+```
+
+Here `-n` accepts a comma-separated list of tenant configs, where each value has a form: `<batch_size>|<delay>|<batch_size>|delay>...`. Note that we use `s` prefix for delays, but it's added only for readability and could be omitted.
+
+In this case, each tenant could head multiple _heads_ separated by gaps in enqueueing jobs. The default gap threshold is 10s, you can change it via `--stats-reset-interval`.
+
 ## Resources
 
 - [The State of Background Jobs in 2019][kirs-post] by Kir Shatrov
