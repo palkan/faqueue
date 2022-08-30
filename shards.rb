@@ -8,10 +8,12 @@ module Config
 
     def inspect
       {
-        concurrency: concurrency,
-        scales: scales,
-        shards: shards,
-        shard_to_scale: shard_to_scale
+        concurrency:,
+        scales:,
+        shards:,
+        shard_to_scale:,
+        head_size:,
+        stats_reset_interval:
       }
     end
   end
@@ -20,7 +22,7 @@ end
 Config.shards = 4
 Config.shard_to_scale = [0, 1, 2, 1, 3, 1]
 
-Config.optparser.banner = "Predefined shards: assing a specific shard to each tenant"
+Config.optparser.banner = "Predefined shards: assigning a specific shard to each tenant"
 Config.optparser.on("-s SHARDS", "--shards SHARDS", Integer, "The number of shards") do |val|
   Config.shards = val
 end
@@ -49,9 +51,18 @@ class BatchMailerWorker < Raqueue::Worker
   end
 end
 
-Config.scales.each.with_index do |num, i|
-  BatchMailerWorker.perform_async({total: num, tenant: i, shard: SHARDS[Config.shard_to_scale[i]]}, queue: :default)
+total_jobs = 0
+
+Config.each_tenant_config do |tenant, batch_size, delay|
+  total_jobs += (batch_size + 1)
+
+  if delay
+    BatchMailerWorker.perform_at(Time.now + delay, {total: batch_size, tenant:,  shard: SHARDS[Config.shard_to_scale[tenant]]}, queue: :default)
+  else
+    BatchMailerWorker.perform_async({total: batch_size, tenant:,  shard: SHARDS[Config.shard_to_scale[tenant]]}, queue: :default)
+  end
+
   sleep 1
 end
 
-node.wait_till_executed(Config.scales.sum + Config.scales.size)
+node.wait_till_executed(total_jobs)

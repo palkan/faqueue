@@ -45,6 +45,92 @@ module Stats
   Ractor.make_shareable(TENANT_NAMES)
 
   class Point < Struct.new(:queue, :worker_id, :started_at, :enqueued_at, :tenant, :do_not_track, keyword_init: true)
+    def lat
+      @lat ||= (started_at - enqueued_at)
+    end
+  end
+
+  using(Module.new do
+    refine Array do
+      def sorted
+        @sorted ||= sort
+      end
+
+      def mean
+        @mean ||= (sum.to_f / size)
+      end
+
+      # Requires sorted array
+      def p90
+        @p90 ||= sorted[(0.9*size).to_i]
+      end
+
+      def stddev
+        from = mean
+        Math.sqrt(sum { (_1 - from)**2 } / size)
+      end
+    end
+
+    refine Float do
+      def duration
+        t = self
+        format("%02d.%03d", t % 60, t.modulo(1) * 1000)
+      end
+    end
+  end)
+
+  class TenantStat
+    extend Forwardable
+    def_delegators :@points, :size, :empty?
+
+    attr_reader :id
+
+    def initialize(id, head_size: Config.head_size, head_reset_interval: Config.stats_reset_interval)
+      @head_size = head_size
+      @head_reset_interval = head_reset_interval
+      @id = id
+      @heads = []
+      @points = []
+      @last_enqueued_at = 0
+    end
+
+    def lats
+      points.map(&:lat)
+    end
+
+    # def_delegators doesn't work with refinements
+    def mean
+      lats.mean
+    end
+
+    def p90
+      lats.p90
+    end
+
+    def <<(point)
+      points << point
+
+      if last_enqueued_at + head_reset_interval < point.enqueued_at
+        @heads << [point]
+      elsif @heads.last.size < head_size
+        @heads.last << point
+      end
+
+      self.last_enqueued_at = point.enqueued_at
+    end
+
+    def heads
+      @heads.flatten.map(&:lat)
+    end
+
+    def heads_total
+      @heads.size
+    end
+
+    private
+
+    attr_reader :head_size, :head_reset_interval, :points
+    attr_accessor :last_enqueued_at
   end
 
   class << self
@@ -120,37 +206,8 @@ module Stats
       lines.size
     end
 
-    using(Module.new do
-      refine Array do
-        def sorted
-          @sorted ||= sort
-        end
-
-        def mean
-          @mean ||= (sum.to_f / size)
-        end
-
-        # Requires sorted array
-        def p90
-          @p90 ||= sorted[(0.9*size).to_i]
-        end
-
-        def stddev
-          from = mean
-          Math.sqrt(sum { (_1 - from)**2 } / size)
-        end
-      end
-
-      refine Float do
-        def duration
-          t = self
-          format("%02d.%03d", t % 60, t.modulo(1) * 1000)
-        end
-      end
-    end)
-
     def draw_table(data)
-      tenants = Hash.new { |h, k| h[k] = [] }
+      tenants = Hash.new { |h, k| h[k] = TenantStat.new(k) }
 
       all_lats = []
       min_start = nil
@@ -159,19 +216,16 @@ module Stats
       data.each do |item|
         next if item.do_not_track
 
-        lat = item.started_at - item.enqueued_at
-
         min_start = item.enqueued_at if min_start.nil? || item.enqueued_at < min_start
         max_end = item.started_at if max_end.nil? || item.started_at > max_end
 
-        # Do not track batch jobs
-        all_lats << lat unless tenants[item.tenant].empty?
+        all_lats << item.lat unless tenants[item.tenant].empty?
 
-        tenants[item.tenant] << lat
+        tenants[item.tenant] << item
       end
 
       all_mean = all_lats.mean
-      head = tenants.values.map(&:size).min
+      head = Config.head_size
 
       cols = TTY::Screen.columns > 120 ? 6 : 4
 
@@ -179,11 +233,12 @@ module Stats
 
       tenants.each do |k, lats|
         color = AVAILABLE_COLORS[k]
+        heads_total = lats.heads_total > 1 ? " (heads #{lats.heads_total})" : ""
         table << [
           "Tenant #{TENANT_NAMES[k]}",
-          lats.size,
-          lats.take(head).mean.duration,
-          lats.take(head).p90.duration,
+          "#{lats.size}#{heads_total}",
+          lats.heads.mean.duration,
+          lats.heads.p90.duration,
           lats.mean.duration,
           lats.p90.duration,
         ].map { _1.to_s.color(color) }.take(cols)
@@ -201,8 +256,8 @@ module Stats
       table << [
         "Stddev",
         "",
-        tenants.values.map { _1.take(head).mean }.stddev,
-        tenants.values.map { _1.take(head).p90 }.stddev,
+        tenants.values.map { _1.heads.mean }.stddev,
+        tenants.values.map { _1.heads.p90 }.stddev,
         tenants.values.map(&:mean).stddev,
         tenants.values.map(&:p90).stddev
       ].take(cols)

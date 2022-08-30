@@ -28,18 +28,28 @@ require "optparse"
 
 module Config
   class << self
-    attr_accessor :scales, :concurrency
+    attr_accessor :scales, :concurrency, :head_size, :stats_reset_interval
 
     def optparser
       return @optparser if defined?(@optparser)
 
       @optparser = OptionParser.new do |opts|
         opts.on("-n SCALES", "--number=SCALES", Array, "The total number of jobs to enqueue per tenant (comma-separated)") do |v|
-          Config.scales = v.map(&:to_i).sort { -_1 }
+          Config.scales = v.map do
+            _1.split("|").map(&:to_i)
+          end
         end
 
-        opts.on("-c CONCURRENCY", "--concurrency=CONCURRENCY", Integer, "The concurrency factor (depends on implementation)") do |v|
-          Config.concurrency = v
+        opts.on("-c CONCURRENCY", "--concurrency=CONCURRENCY", Integer, "The concurrency factor (depends on implementation)") do
+          Config.concurrency = _1
+        end
+
+        opts.on("--head=HEAD", Integer, "The head size for fairness metrics") do
+          Config.head_size = _1
+        end
+
+        opts.on("--stats-reset-interval=INTERVAL", Integer, "The number of seconds of no enqueued jobs to create a new head for a tenant") do
+          Config.stats_reset_interval = _1
         end
       end
     end
@@ -50,22 +60,36 @@ module Config
       puts "Config: #{self.inspect}"
     end
 
+    def each_tenant_config
+      scales.each.with_index do |scale, i|
+        scale = Array(scale)
+
+        scale.each_slice(2) do |(size, delay)|
+          yield i, size, delay
+        end
+      end
+    end
+
     def inspect
       {
-        concurrency: concurrency,
-        scales: scales
+        concurrency:,
+        scales:,
+        head_size:,
+        stats_reset_interval:
       }
     end
   end
 
   self.concurrency = 12
   self.scales = [300, 20, 500, 30, 200, 20]
+  self.head_size = 20
+  self.stats_reset_interval = 10
 end
 
 require_relative "./raqueue"
 
 class MailerWorker < Raqueue::Worker
-  def perform(*)
+  def perform(*args)
     # Sleep for 200-250ms
     sleep(0.2 + rand(50) / 1000.0)
   end

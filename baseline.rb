@@ -16,9 +16,18 @@ class BatchMailerWorker < Raqueue::Worker
   end
 end
 
-Config.scales.each.with_index do |num, i|
-  BatchMailerWorker.perform_async({total: num, tenant: i}, queue: :default)
+total_jobs = 0
+
+Config.each_tenant_config do |tenant, batch_size, delay|
+  total_jobs += (batch_size + 1)
+
+  if delay
+    BatchMailerWorker.perform_at(Time.now + delay, {total: batch_size, tenant:}, queue: :default)
+  else
+    BatchMailerWorker.perform_async({total: batch_size, tenant:}, queue: :default)
+  end
+
   sleep 1
 end
 
-node.wait_till_executed(Config.scales.sum + Config.scales.size)
+node.wait_till_executed(total_jobs)
