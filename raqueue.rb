@@ -259,7 +259,8 @@ module Raqueue
         worker_id: Ractor.current[:worker_id],
         started_at: Utils.now,
         enqueued_at: payload[:start],
-        tenant: payload[:tenant]
+        tenant: payload[:tenant],
+        do_not_track: self.class.name.start_with?("Batch")
       ), move: true) if stats
     end
   end

@@ -44,7 +44,7 @@ module Stats
   TENANT_NAMES.delete("u")
   Ractor.make_shareable(TENANT_NAMES)
 
-  class Point < Struct.new(:queue, :worker_id, :started_at, :enqueued_at, :tenant, keyword_init: true)
+  class Point < Struct.new(:queue, :worker_id, :started_at, :enqueued_at, :tenant, :do_not_track, keyword_init: true)
   end
 
   class << self
@@ -94,6 +94,8 @@ module Stats
       lines = Hash.new { |h, k| h[k] = [] }
 
       data.each do |item|
+        next if item.do_not_track
+
         color = AVAILABLE_COLORS[item.tenant]
         name = TENANT_NAMES[item.tenant]
         worker_id = "#{item.queue}:#{item.worker_id}"
@@ -155,6 +157,8 @@ module Stats
       max_end = nil
 
       data.each do |item|
+        next if item.do_not_track
+
         lat = item.started_at - item.enqueued_at
 
         min_start = item.enqueued_at if min_start.nil? || item.enqueued_at < min_start
@@ -165,9 +169,6 @@ module Stats
 
         tenants[item.tenant] << lat
       end
-
-      # Remove batch jobs
-      tenants.transform_values! { _1.shift; _1 }
 
       all_mean = all_lats.mean
       head = tenants.values.map(&:size).min
