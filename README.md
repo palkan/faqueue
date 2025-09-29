@@ -152,12 +152,16 @@ Here `-n` accepts a comma-separated list of tenant configs, where each value has
 
 In this case, each tenant could head multiple _heads_ separated by gaps in enqueueing jobs. The default gap threshold is 10s, you can change it via `--stats-reset-interval`.
 
-## Resources
+## Resources and related projects
 
 - [The State of Background Jobs in 2019][kirs-post] by Kir Shatrov
 - [Fairway][]
+- [sidekiq-fairplay][]
+- [sidekiq-fair_tenant][]
 
 [kirs-post]: https://kirshatrov.com/2019/01/03/state-of-background-jobs/
 [Fairway]: https://github.com/customerio/fairway
 [sidekiq-shards]: https://www.mikeperham.com/2019/12/17/workload-isolation-with-queue-sharding/
 [job-iteration]: https://github.com/Shopify/job-iteration
+[sidekiq-fairplay]: https://github.com/baygeldin/sidekiq-fairplay
+[sidekiq-fair_tenant]: https://github.com/Envek/sidekiq-fair_tenant
